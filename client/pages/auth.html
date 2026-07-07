@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login / Register — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="container">
+    <a href="/index.html" class="navbar-brand">
+      <div class="logo-icon">🕌</div>
+      <span>Wasi<span style="color:#fff">la</span></span>
+    </a>
+    <ul class="nav-links" id="nav-links"></ul>
+  </div>
+</nav>
+
+<!-- Auth Container -->
+<div class="auth-container">
+  <div class="auth-card">
+
+    <!-- Header -->
+    <div class="auth-card-header">
+      <div class="logo">🕌 Wasi<span>la</span></div>
+      <p>A Digital Bridge for Transparent Charity</p>
+    </div>
+
+    <!-- Body -->
+    <div class="auth-card-body">
+
+      <!-- Tab buttons -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login"    onclick="switchTab('login')">Login</button>
+        <button class="auth-tab"        id="tab-register" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- ── Login Form ──────────────────────────────────────────────── -->
+      <form id="login-form">
+        <div id="login-alert"></div>
+
+        <div class="form-group">
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" class="form-control" placeholder="you@example.com" required />
+        </div>
+
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="login-btn">Login</button>
+
+        <p style="text-align:center;margin-top:14px;font-size:0.85rem;color:var(--text-muted)">
+          Don't have an account? <a href="#" onclick="switchTab('register')">Register here</a>
+        </p>
+      </form>
+
+      <!-- ── Register Form ───────────────────────────────────────────── -->
+      <form id="register-form" class="hidden">
+        <div id="register-alert"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-name">Full Name</label>
+            <input type="text" id="reg-name" class="form-control" placeholder="Your full name" required minlength="2" />
+          </div>
+          <div class="form-group">
+            <label for="reg-role">I am a</label>
+            <select id="reg-role" class="form-control">
+              <option value="donor">Donor (I want to give)</option>
+              <option value="beneficiary">Beneficiary (I need help)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-email">Email Address</label>
+          <input type="email" id="reg-email" class="form-control" placeholder="you@example.com" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-phone">Phone (optional)</label>
+            <input type="text" id="reg-phone" class="form-control" placeholder="03001234567" />
+          </div>
+          <div class="form-group">
+            <label for="reg-city">City (optional)</label>
+            <input type="text" id="reg-city" class="form-control" placeholder="Multan" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-password">Password</label>
+          <input type="password" id="reg-password" class="form-control" placeholder="Min 6 characters" required minlength="6" />
+        </div>
+
+        <div class="form-group">
+          <label for="reg-confirm">Confirm Password</label>
+          <input type="password" id="reg-confirm" class="form-control" placeholder="Repeat password" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="register-btn">Create Account</button>
+
+        <p style="text-align:center;margin-top:14px;font-size:0.85rem;color:var(--text-muted)">
+          Already have an account? <a href="#" onclick="switchTab('login')">Login here</a>
+        </p>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    renderNavLinks();
+
+    // If already logged in, redirect to dashboard
+    if (isLoggedIn()) window.location.href = "/pages/dashboard.html";
+
+    // Check for ?tab=register in URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "register") switchTab("register");
+  });
+
+  // ── Tab switcher ───────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById("login-form").classList.toggle("hidden", tab !== "login");
+    document.getElementById("register-form").classList.toggle("hidden", tab !== "register");
+    document.getElementById("tab-login").classList.toggle("active", tab === "login");
+    document.getElementById("tab-register").classList.toggle("active", tab !== "login");
+  }
+
+  // ── Login form submit ──────────────────────────────────────────────────────
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("login-btn");
+    const alertEl = document.getElementById("login-alert");
+    alertEl.innerHTML = "";
+
+    const email    = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+
+    setLoading(btn, true, "Logging in…");
+    const { data, error } = await Auth.login({ email, password });
+    setLoading(btn, false);
+
+    if (error) {
+      alertEl.innerHTML = `<div class="alert alert-error">${error}</div>`;
+      return;
+    }
+
+    saveSession(data.token, data.user);
+    showToast(`Welcome back, ${data.user.name}! 🎉`, "success");
+
+    // Redirect based on role
+    setTimeout(() => {
+      window.location.href = "/pages/dashboard.html";
+    }, 600);
+  });
+
+  // ── Register form submit ───────────────────────────────────────────────────
+  document.getElementById("register-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn     = document.getElementById("register-btn");
+    const alertEl = document.getElementById("register-alert");
+    alertEl.innerHTML = "";
+
+    const name     = document.getElementById("reg-name").value.trim();
+    const role     = document.getElementById("reg-role").value;
+    const email    = document.getElementById("reg-email").value.trim();
+    const phone    = document.getElementById("reg-phone").value.trim();
+    const city     = document.getElementById("reg-city").value.trim();
+    const password = document.getElementById("reg-password").value;
+    const confirm  = document.getElementById("reg-confirm").value;
+
+    if (password !== confirm) {
+      alertEl.innerHTML = `<div class="alert alert-error">Passwords do not match.</div>`;
+      return;
+    }
+
+    setLoading(btn, true, "Creating account…");
+    const { data, error } = await Auth.register({ name, email, password, role, phone, city });
+    setLoading(btn, false);
+
+    if (error) {
+      alertEl.innerHTML = `<div class="alert alert-error">${error}</div>`;
+      return;
+    }
+
+    saveSession(data.token, data.user);
+    showToast(`Account created! Welcome to Wasila 🌟`, "success");
+    setTimeout(() => { window.location.href = "/pages/dashboard.html"; }, 600);
+  });
+</script>
+</body>
+</html>

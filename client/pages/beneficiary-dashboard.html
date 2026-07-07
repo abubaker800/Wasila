@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beneficiary Dashboard — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-user">
+        <div id="sidebarName" class="sidebar-user-name">Loading...</div>
+        <div class="sidebar-user-role">Beneficiary</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" onclick="showSection('myCases')" id="navMyCases">
+          <span class="nav-icon">📋</span> My Cases
+        </a>
+        <a href="#" onclick="showSection('postCase')" id="navPostCase">
+          <span class="nav-icon">➕</span> Post New Case
+        </a>
+        <a href="/pages/cases.html">
+          <span class="nav-icon">🔍</span> Browse All Cases
+        </a>
+        <a href="#" onclick="Auth.logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-content">
+      <!-- My Cases Section -->
+      <div id="sectionMyCases">
+        <div class="page-header">
+          <h2 class="page-title">My Cases</h2>
+          <p class="page-subtitle">Track all your submitted aid cases and their status</p>
+        </div>
+        <div id="myCasesContainer">
+          <div class="empty-state"><div class="spinner spinner-dark"></div></div>
+        </div>
+      </div>
+
+      <!-- Post New Case Section -->
+      <div id="sectionPostCase" style="display:none;">
+        <div class="page-header">
+          <h2 class="page-title">Post a New Case</h2>
+          <p class="page-subtitle">Fill in all details. Admin will review within 24-48 hours.</p>
+        </div>
+        <div class="card" style="max-width:700px;">
+          <div class="card-body">
+            <div id="postCaseAlert"></div>
+            <form id="postCaseForm">
+              <div class="form-group">
+                <label class="form-label">Case Title *</label>
+                <input class="form-control" type="text" id="caseTitle" placeholder="e.g. Help for my child's school fees" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Category *</label>
+                <select class="form-control" id="caseCategory" required>
+                  <option value="">-- Select Category --</option>
+                  <option value="Zakat">Zakat</option>
+                  <option value="Sadqa">Sadqa</option>
+                  <option value="Ushr">Ushr</option>
+                  <option value="Fitrana">Fitrana</option>
+                  <option value="General Charity">General Charity</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Description *</label>
+                <textarea class="form-control" id="caseDescription" placeholder="Explain your situation in detail..." rows="5" required></textarea>
+                <p class="form-hint">Minimum 20 characters. Be as detailed as possible.</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Amount Required (PKR) *</label>
+                <input class="form-control" type="number" id="caseAmount" placeholder="e.g. 50000" min="100" required />
+              </div>
+              <hr style="margin:1.5rem 0;border-color:var(--gray-light);">
+              <h4 style="margin-bottom:1rem;color:var(--primary-dark);">💳 Payment Details</h4>
+              <div class="form-group">
+                <label class="form-label">Payment Method *</label>
+                <select class="form-control" id="paymentMethod" required>
+                  <option value="">-- Select Method --</option>
+                  <option value="Bank Account">Bank Account</option>
+                  <option value="JazzCash">JazzCash</option>
+                  <option value="EasyPaisa">EasyPaisa</option>
+                </select>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group">
+                  <label class="form-label">Account Number *</label>
+                  <input class="form-control" type="text" id="accountNumber" placeholder="Account/Mobile number" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Account Holder Name *</label>
+                  <input class="form-control" type="text" id="accountName" placeholder="Name on account" required />
+                </div>
+              </div>
+              <hr style="margin:1.5rem 0;border-color:var(--gray-light);">
+              <div class="form-group">
+                <label class="form-label">📂 Upload Proof Documents (up to 5 files)</label>
+                <input class="form-control" type="file" id="proofDocs" name="proofDocuments" multiple accept=".jpg,.jpeg,.png,.pdf" />
+                <p class="form-hint">Accepted: JPG, PNG, PDF. Max 5MB each.</p>
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg" id="submitCaseBtn">Submit Case for Review</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer><p>© 2026 <span>Wasila</span></p></footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    if (!Auth.requireAuth("beneficiary")) {}
+
+    const user = Auth.user();
+    if (user) document.getElementById("sidebarName").textContent = user.name;
+
+    function showSection(section) {
+      document.getElementById("sectionMyCases").style.display = section === "myCases" ? "block" : "none";
+      document.getElementById("sectionPostCase").style.display = section === "postCase" ? "block" : "none";
+      document.querySelectorAll(".sidebar-nav a").forEach(a => a.classList.remove("active"));
+      document.getElementById(section === "myCases" ? "navMyCases" : "navPostCase").classList.add("active");
+    }
+
+    async function loadMyCases() {
+      const container = document.getElementById("myCasesContainer");
+      try {
+        const data = await casesAPI.getMyCases();
+        if (!data.cases.length) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📋</div>
+              <h3>No cases yet</h3>
+              <p>Click "Post New Case" to submit your first case.</p>
+              <button class="btn btn-primary" style="margin-top:1rem" onclick="showSection('postCase')">Post New Case →</button>
+            </div>`;
+          return;
+        }
+
+        // Build case cards with rejection reason shown prominently
+        container.innerHTML = data.cases.map(c => {
+          // Rejection alert box
+          const rejectionHTML = c.status === "rejected" ? `
+            <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                <span style="font-size:1.2rem;">❌</span>
+                <strong style="color:var(--danger);">Case Rejected</strong>
+              </div>
+              <p style="margin:0;font-size:0.88rem;color:#374151;"><strong>Reason:</strong> ${c.rejectionReason || "Documents could not be verified."}</p>
+              <p style="margin:0.5rem 0 0;font-size:0.82rem;color:var(--gray);">You can submit a new case with updated documents.</p>
+              <button class="btn btn-primary btn-sm" style="margin-top:0.75rem" onclick="showSection('postCase')">Submit New Case →</button>
+            </div>` : "";
+
+          // Verified info box
+          const verifiedHTML = c.status === "verified" ? `
+            <div style="background:#dcfce7;border:1px solid #86efac;border-radius:var(--radius-sm);padding:0.75rem;margin-bottom:1rem;">
+              <p style="margin:0;font-size:0.88rem;color:#16a34a;"><strong>✅ Your case is live!</strong> Donors can now see and donate to your case.</p>
+              <a href="/pages/case-detail.html?id=${c._id}" style="font-size:0.82rem;color:var(--primary);font-weight:600;">View live case →</a>
+            </div>` : "";
+
+          // Pending info
+          const pendingHTML = c.status === "pending" ? `
+            <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:var(--radius-sm);padding:0.75rem;margin-bottom:1rem;">
+              <p style="margin:0;font-size:0.88rem;color:#d97706;"><strong>⏳ Under Review</strong> — Admin will review your case within 24-48 hours.</p>
+            </div>` : "";
+
+          const pct = Utils.progressPercent(c.amountRaised, c.amountNeeded);
+
+          return `
+            <div class="card" style="margin-bottom:1.25rem;">
+              <div class="card-body">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
+                  <div>
+                    <h3 style="font-size:1.05rem;color:var(--primary-dark);margin:0 0 0.3rem;">${c.title}</h3>
+                    <span style="font-size:0.82rem;color:var(--gray);">${c.category} • ${new Date(c.createdAt).toLocaleDateString("en-PK")}</span>
+                  </div>
+                  ${Utils.getBadgeHTML(c.status)}
+                </div>
+
+                ${rejectionHTML}${verifiedHTML}${pendingHTML}
+
+                <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+                  <div>
+                    <p style="font-size:0.78rem;color:var(--gray);margin:0;">Amount Needed</p>
+                    <p style="font-weight:700;color:var(--primary-dark);margin:0;">${Utils.formatPKR(c.amountNeeded)}</p>
+                  </div>
+                  <div>
+                    <p style="font-size:0.78rem;color:var(--gray);margin:0;">Raised So Far</p>
+                    <p style="font-weight:700;color:var(--success);margin:0;">${Utils.formatPKR(c.amountRaised)}</p>
+                  </div>
+                  <div>
+                    <p style="font-size:0.78rem;color:var(--gray);margin:0;">Progress</p>
+                    <p style="font-weight:700;color:var(--primary);margin:0;">${pct}%</p>
+                  </div>
+                </div>
+
+                ${c.status === "verified" || c.status === "fulfilled" ? `
+                <div class="progress-bar" style="margin-top:0.75rem;">
+                  <div class="progress-fill" style="width:${pct}%"></div>
+                </div>` : ""}
+              </div>
+            </div>`;
+        }).join("");
+
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    }
+
+    // Submit new case
+    document.getElementById("postCaseForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      Utils.clearAlert("postCaseAlert");
+      const btn = document.getElementById("submitCaseBtn");
+      Utils.setLoading(btn, true);
+
+      const formData = new FormData();
+      formData.append("title", document.getElementById("caseTitle").value.trim());
+      formData.append("category", document.getElementById("caseCategory").value);
+      formData.append("description", document.getElementById("caseDescription").value.trim());
+      formData.append("amountNeeded", document.getElementById("caseAmount").value);
+      formData.append("paymentMethod", document.getElementById("paymentMethod").value);
+      formData.append("accountNumber", document.getElementById("accountNumber").value.trim());
+      formData.append("accountName", document.getElementById("accountName").value.trim());
+
+      const files = document.getElementById("proofDocs").files;
+      for (let i = 0; i < files.length; i++) formData.append("proofDocuments", files[i]);
+
+      try {
+        await casesAPI.create(formData);
+        Utils.showAlert("postCaseAlert", "✅ Case submitted! Admin will review within 24-48 hours. You will be notified by email.", "success");
+        document.getElementById("postCaseForm").reset();
+        Utils.setLoading(btn, false);
+        setTimeout(() => { showSection("myCases"); loadMyCases(); }, 2500);
+      } catch (err) {
+        Utils.showAlert("postCaseAlert", err.message, "danger");
+        Utils.setLoading(btn, false);
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", loadMyCases);
+  </script>
+</body>
+</html>

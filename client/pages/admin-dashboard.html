@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- Navbar injected by navbar.js -->
+
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-user">
+        <div id="sidebarName" class="sidebar-user-name">Admin</div>
+        <div class="sidebar-user-role" style="color:var(--gold);">Administrator</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" onclick="showSection('overview')" id="navOverview">
+          <span class="nav-icon">📊</span> Overview
+        </a>
+        <a href="#" onclick="showSection('pending')" id="navPending">
+          <span class="nav-icon">⏳</span> Pending Review
+        </a>
+        <a href="#" onclick="showSection('allCases')" id="navAllCases">
+          <span class="nav-icon">📋</span> All Cases
+        </a>
+        <a href="/pages/cases.html">
+          <span class="nav-icon">🌐</span> Public View
+        </a>
+        <a href="#" onclick="Auth.logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-content">
+
+      <!-- Overview Section -->
+      <div id="sectionOverview">
+        <div class="page-header">
+          <h2 class="page-title">Dashboard Overview</h2>
+          <p class="page-subtitle">Platform statistics at a glance</p>
+        </div>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card"><div class="spinner spinner-dark" style="margin:0 auto"></div></div>
+        </div>
+        <div style="margin-top:1rem;" id="pendingPreviewSection">
+          <h3 style="margin-bottom:1rem;color:var(--primary-dark);">⏳ Cases Awaiting Review</h3>
+          <div id="pendingPreview"></div>
+        </div>
+      </div>
+
+      <!-- Pending Cases Section -->
+      <div id="sectionPending" style="display:none;">
+        <div class="page-header">
+          <h2 class="page-title">⏳ Pending Review</h2>
+          <p class="page-subtitle">Review documents and approve or reject each case</p>
+        </div>
+        <div id="pendingContainer"></div>
+      </div>
+
+      <!-- All Cases Section -->
+      <div id="sectionAllCases" style="display:none;">
+        <div class="page-header" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <h2 class="page-title">All Cases</h2>
+            <p class="page-subtitle">Complete case list with filtering</p>
+          </div>
+          <select class="form-control" id="statusFilter" style="max-width:180px;" onchange="loadAllCases()">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="verified">Verified</option>
+            <option value="rejected">Rejected</option>
+            <option value="fulfilled">Fulfilled</option>
+          </select>
+        </div>
+        <div id="allCasesContainer"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Review Modal -->
+  <div class="modal-overlay" id="reviewModal">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <h3 id="reviewModalTitle">Review Case</h3>
+        <button class="modal-close" onclick="closeReviewModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="reviewAlertBox"></div>
+        <div id="reviewCaseInfo" style="background:var(--light);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;font-size:0.9rem;"></div>
+        <div class="form-group" id="rejectionGroup" style="display:none;">
+          <label class="form-label">Rejection Reason (optional but recommended)</label>
+          <textarea class="form-control" id="rejectionReason" placeholder="Explain why this case is being rejected..." rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeReviewModal()">Cancel</button>
+        <button class="btn btn-danger" id="rejectBtn" onclick="submitReview('rejected')">❌ Reject</button>
+        <button class="btn btn-primary" id="approveBtn" onclick="submitReview('verified')">✅ Verify & Approve</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 <span>Wasila</span></p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    if (!Auth.requireAuth("admin")) { /* redirected */ }
+
+    const user = Auth.user();
+    if (user) document.getElementById("sidebarName").textContent = user.name;
+
+    let activeCaseId = null;
+
+    function showSection(section) {
+      ["Overview", "Pending", "AllCases"].forEach(s => {
+        document.getElementById(`section${s}`).style.display = s.toLowerCase() === section.toLowerCase() ? "block" : "none";
+        const nav = document.getElementById(`nav${s}`);
+        if (nav) nav.classList.remove("active");
+      });
+      const navMap = { overview: "navOverview", pending: "navPending", allcases: "navAllCases" };
+      const navEl = document.getElementById(navMap[section.toLowerCase()]);
+      if (navEl) navEl.classList.add("active");
+
+      if (section === "pending") loadPendingCases();
+      if (section === "allcases" || section === "allCases") loadAllCases();
+    }
+
+    // Load stats
+    async function loadStats() {
+      try {
+        const data = await casesAPI.adminStats();
+        const s = data.stats;
+        document.getElementById("statsGrid").innerHTML = `
+          <div class="stat-card"><div class="stat-number">${s.totalCases}</div><div class="stat-label">Total Cases</div></div>
+          <div class="stat-card"><div class="stat-number" style="color:var(--warning)">${s.pendingCases}</div><div class="stat-label">Pending Review</div></div>
+          <div class="stat-card"><div class="stat-number" style="color:var(--success)">${s.verifiedCases}</div><div class="stat-label">Verified Cases</div></div>
+          <div class="stat-card"><div class="stat-number" style="color:var(--danger)">${s.rejectedCases}</div><div class="stat-label">Rejected Cases</div></div>
+          <div class="stat-card"><div class="stat-number">${s.totalDonations}</div><div class="stat-label">Total Pledges</div></div>
+          <div class="stat-card gold"><div class="stat-number" style="font-size:1.3rem">${Utils.formatPKR(s.totalAmountRaised)}</div><div class="stat-label">Total Raised</div></div>`;
+      } catch (err) {
+        document.getElementById("statsGrid").innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    }
+
+    // Load pending cases (preview on overview + full list)
+    async function loadPendingCases(isPreview = false) {
+      const container = document.getElementById(isPreview ? "pendingPreview" : "pendingContainer");
+      container.innerHTML = `<div class="empty-state"><div class="spinner spinner-dark"></div></div>`;
+      try {
+        const data = await casesAPI.adminGetAll({ status: "pending" });
+        if (!data.cases.length) {
+          container.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><h3>No pending cases</h3><p>All caught up!</p></div>`;
+          return;
+        }
+        container.innerHTML = `<div class="card"><div class="table-wrapper"><table>
+          <thead><tr><th>Title</th><th>Beneficiary</th><th>Category</th><th>Amount</th><th>Docs</th><th>Date</th><th>Action</th></tr></thead>
+          <tbody>${data.cases.map(c => `
+            <tr>
+              <td><a href="/pages/case-detail.html?id=${c._id}" target="_blank" style="color:var(--primary);font-weight:600">${c.title}</a></td>
+              <td>${c.beneficiary?.name || "N/A"}<br><small style="color:var(--gray)">${c.beneficiary?.city || ""}</small></td>
+              <td>${c.category}</td>
+              <td>${Utils.formatPKR(c.amountNeeded)}</td>
+              <td>${c.proofDocuments?.length || 0} file(s)</td>
+              <td>${new Date(c.createdAt).toLocaleDateString("en-PK")}</td>
+              <td><button class="btn btn-primary btn-sm" onclick="openReviewModal('${c._id}', \`${c.title.replace(/`/g,"'")}\`, ${c.proofDocuments?.length || 0})">Review</button></td>
+            </tr>`).join("")}
+          </tbody></table></div></div>`;
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    }
+
+    // All cases
+    async function loadAllCases() {
+      const container = document.getElementById("allCasesContainer");
+      const status = document.getElementById("statusFilter").value;
+      container.innerHTML = `<div class="empty-state"><div class="spinner spinner-dark"></div></div>`;
+      try {
+        const data = await casesAPI.adminGetAll(status ? { status } : {});
+        if (!data.cases.length) {
+          container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No cases found</h3></div>`;
+          return;
+        }
+        container.innerHTML = `<div class="card"><div class="table-wrapper"><table>
+          <thead><tr><th>Title</th><th>Beneficiary</th><th>Category</th><th>Amount</th><th>Raised</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody>${data.cases.map(c => `
+            <tr>
+              <td><a href="/pages/case-detail.html?id=${c._id}" target="_blank" style="color:var(--primary);font-weight:600">${c.title}</a></td>
+              <td>${c.beneficiary?.name || "N/A"}</td>
+              <td>${c.category}</td>
+              <td>${Utils.formatPKR(c.amountNeeded)}</td>
+              <td>${Utils.formatPKR(c.amountRaised)}</td>
+              <td>${Utils.getBadgeHTML(c.status)}</td>
+              <td>${new Date(c.createdAt).toLocaleDateString("en-PK")}</td>
+            </tr>`).join("")}
+          </tbody></table></div></div>`;
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    }
+
+    function openReviewModal(id, title, docCount) {
+      activeCaseId = id;
+      document.getElementById("reviewModalTitle").textContent = `Review: ${title}`;
+      document.getElementById("reviewCaseInfo").innerHTML =
+        `<strong>Case:</strong> ${title}<br><strong>Documents uploaded:</strong> ${docCount} file(s)<br>
+         <a href="/pages/case-detail.html?id=${id}" target="_blank" style="color:var(--primary);font-weight:600">View full case & documents →</a>`;
+      document.getElementById("rejectionGroup").style.display = "none";
+      document.getElementById("rejectionReason").value = "";
+      Utils.clearAlert("reviewAlertBox");
+      document.getElementById("reviewModal").classList.add("active");
+    }
+
+    function closeReviewModal() {
+      document.getElementById("reviewModal").classList.remove("active");
+      activeCaseId = null;
+    }
+
+    // Show rejection reason field when reject is clicked
+    document.getElementById("rejectBtn").addEventListener("mouseenter", () => {
+      document.getElementById("rejectionGroup").style.display = "block";
+    });
+
+    async function submitReview(status) {
+      if (!activeCaseId) return;
+      Utils.clearAlert("reviewAlertBox");
+      const rejectionReason = document.getElementById("rejectionReason").value.trim();
+      const btn = status === "verified" ? document.getElementById("approveBtn") : document.getElementById("rejectBtn");
+      Utils.setLoading(btn, true);
+
+      try {
+        await casesAPI.adminReview(activeCaseId, { status, rejectionReason });
+        closeReviewModal();
+        Utils.showAlert("reviewAlertBox", `Case ${status} successfully.`, "success");
+        loadStats();
+        loadPendingCases(true);
+        // If pending section is visible, refresh it too
+        if (document.getElementById("sectionPending").style.display !== "none") loadPendingCases(false);
+      } catch (err) {
+        Utils.showAlert("reviewAlertBox", err.message, "danger");
+        Utils.setLoading(btn, false);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadStats();
+      loadPendingCases(true); // load preview on overview
+    });
+  </script>
+</body>
+</html>

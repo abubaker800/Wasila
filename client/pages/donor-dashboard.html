@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donor Dashboard — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- Navbar injected by navbar.js -->
+
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar-user">
+        <div id="sidebarName" class="sidebar-user-name">Loading...</div>
+        <div class="sidebar-user-role">Donor</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" onclick="showSection('myDonations')" id="navMyDonations">
+          <span class="nav-icon">💚</span> My Donations
+        </a>
+        <a href="/pages/cases.html">
+          <span class="nav-icon">🔍</span> Browse Cases
+        </a>
+        <a href="#" onclick="Auth.logout()">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-content">
+      <div id="sectionMyDonations">
+        <div class="page-header">
+          <h2 class="page-title">My Donation History</h2>
+          <p class="page-subtitle">All your recorded donation pledges</p>
+        </div>
+        <div id="donationsContainer">
+          <div class="empty-state"><div class="spinner spinner-dark"></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <p>© 2026 <span>Wasila</span></p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    if (!Auth.requireAuth("donor")) { /* redirected */ }
+
+    const user = Auth.user();
+    if (user) document.getElementById("sidebarName").textContent = user.name;
+
+    function showSection(section) {
+      // Only one section right now
+      document.querySelectorAll(".sidebar-nav a").forEach(a => a.classList.remove("active"));
+      document.getElementById("navMyDonations").classList.add("active");
+    }
+
+    async function loadMyDonations() {
+      const container = document.getElementById("donationsContainer");
+      try {
+        const data = await donationsAPI.getMyDonations();
+        if (!data.donations.length) {
+          container.innerHTML = `<div class="empty-state"><div class="empty-icon">💚</div><h3>No donations yet</h3><p><a href="/pages/cases.html" class="btn btn-primary" style="margin-top:1rem">Browse Verified Cases</a></p></div>`;
+          return;
+        }
+
+        // Summary card
+        const total = data.donations.reduce((s, d) => s + d.amount, 0);
+        container.innerHTML = `
+          <div class="stats-grid" style="margin-bottom:1.5rem;">
+            <div class="stat-card">
+              <div class="stat-number">${data.donations.length}</div>
+              <div class="stat-label">Total Donations</div>
+            </div>
+            <div class="stat-card gold">
+              <div class="stat-number" style="font-size:1.4rem;">${Utils.formatPKR(total)}</div>
+              <div class="stat-label">Total Pledged</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Case</th><th>Category</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody>${data.donations.map(d => `
+                  <tr>
+                    <td><a href="/pages/case-detail.html?id=${d.case?._id}" style="color:var(--primary);font-weight:600">${d.case?.title || "N/A"}</a></td>
+                    <td>${d.case?.category || "—"}</td>
+                    <td style="font-weight:700;color:var(--gold)">${Utils.formatPKR(d.amount)}</td>
+                    <td>${Utils.getBadgeHTML(d.case?.status || "pending")}</td>
+                    <td>${new Date(d.createdAt).toLocaleDateString("en-PK")}</td>
+                  </tr>`).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>`;
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadMyDonations);
+  </script>
+</body>
+</html>

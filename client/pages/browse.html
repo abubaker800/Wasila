@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Browse Cases — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="/index.html" class="navbar-brand">
+      <div class="logo-icon">🕌</div>
+      <span>Wasi<span style="color:#fff">la</span></span>
+    </a>
+    <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+    <ul class="nav-links" id="nav-links"></ul>
+  </div>
+</nav>
+
+<!-- Page header -->
+<div class="page-header">
+  <div class="container">
+    <h1>Browse Verified Cases</h1>
+    <p>All cases are reviewed and approved by our admin team. Your donation goes directly to the beneficiary.</p>
+  </div>
+</div>
+
+<div class="section">
+  <div class="container">
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="🔍  Search by name or description…" />
+      <select id="category-filter">
+        <option value="all">All Categories</option>
+        <option value="zakat">Zakat</option>
+        <option value="sadqa">Sadqa</option>
+        <option value="ushr">Ushr</option>
+        <option value="fitrana">Fitrana</option>
+        <option value="general">General</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="loadCases(1)">Filter</button>
+    </div>
+
+    <!-- Result count -->
+    <p id="result-info" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px"></p>
+
+    <!-- Cases Grid -->
+    <div id="cases-grid" class="case-grid">
+      <div class="loading-box" style="grid-column:1/-1">
+        <div class="spinner"></div><p>Loading cases…</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-bottom">
+      <p>© 2026 Wasila </p>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script>
+  let currentPage = 1;
+  let totalPages  = 1;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    renderNavLinks();
+    initHamburger();
+
+    // Apply ?category from URL if any
+    const params = new URLSearchParams(window.location.search);
+    const cat = params.get("category");
+    if (cat) document.getElementById("category-filter").value = cat;
+
+    loadCases(1);
+
+    // Search on Enter
+    document.getElementById("search-input").addEventListener("keyup", (e) => {
+      if (e.key === "Enter") loadCases(1);
+    });
+  });
+
+  async function loadCases(page) {
+    currentPage = page;
+    const grid   = document.getElementById("cases-grid");
+    const info   = document.getElementById("result-info");
+    const pager  = document.getElementById("pagination");
+
+    grid.innerHTML = `<div class="loading-box" style="grid-column:1/-1"><div class="spinner"></div><p>Loading…</p></div>`;
+    pager.innerHTML = "";
+
+    const search   = document.getElementById("search-input").value.trim();
+    const category = document.getElementById("category-filter").value;
+
+    const params = { page, limit: 9 };
+    if (search)             params.search   = search;
+    if (category !== "all") params.category = category;
+
+    const { data, error } = await Cases.getAll(params);
+
+    if (error || !data) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚠️</div><p>${error || "Failed to load"}</p></div>`;
+      return;
+    }
+
+    totalPages = data.pages || 1;
+    info.textContent = `Showing ${data.count} of ${data.total} cases`;
+
+    if (data.cases.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">📭</div><h3>No cases found</h3><p>Try adjusting your search or category filter.</p></div>`;
+      return;
+    }
+
+    grid.innerHTML = data.cases.map(buildCaseCard).join("");
+    renderPagination(data.currentPage, totalPages);
+  }
+
+  function renderPagination(current, total) {
+    const pager = document.getElementById("pagination");
+    if (total <= 1) return;
+
+    let html = `<button class="page-btn" onclick="loadCases(${current - 1})" ${current === 1 ? "disabled" : ""}>‹</button>`;
+
+    for (let i = 1; i <= total; i++) {
+      html += `<button class="page-btn ${i === current ? "active" : ""}" onclick="loadCases(${i})">${i}</button>`;
+    }
+
+    html += `<button class="page-btn" onclick="loadCases(${current + 1})" ${current === total ? "disabled" : ""}>›</button>`;
+    pager.innerHTML = html;
+  }
+</script>
+</body>
+</html>

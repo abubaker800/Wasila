@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <h1><span>وسیلہ</span> Wasila</h1>
+        <p>A Digital Bridge for Zakat & Sadqa</p>
+      </div>
+      <h2 class="auth-title">Welcome Back</h2>
+      <div id="alertBox"></div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <input class="form-control" type="email" id="email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-control" type="password" id="password" placeholder="Enter your password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
+          Login
+        </button>
+      </form>
+      <div class="auth-switch">
+        Don't have an account? <a href="/pages/register.html">Register here</a>
+      </div>
+      <div class="auth-switch" style="margin-top:0.5rem">
+        <a href="/">← Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (Auth.isLoggedIn()) {
+      const role = Auth.user()?.role;
+      window.location.href = role === "admin" ? "/pages/admin-dashboard.html"
+        : role === "beneficiary" ? "/pages/beneficiary-dashboard.html"
+        : "/pages/donor-dashboard.html";
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      Utils.clearAlert("alertBox");
+      const btn = document.getElementById("loginBtn");
+      Utils.setLoading(btn, true);
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      try {
+        const data = await authAPI.login({ email, password });
+        Auth.save(data.token, data.user);
+        // Redirect based on role
+        const role = data.user.role;
+        window.location.href = role === "admin" ? "/pages/admin-dashboard.html"
+          : role === "beneficiary" ? "/pages/beneficiary-dashboard.html"
+          : "/pages/donor-dashboard.html";
+      } catch (err) {
+        Utils.showAlert("alertBox", err.message, "danger");
+        Utils.setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Browse Cases — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- Navbar injected by navbar.js -->
+
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">🤲 Verified Cases</h1>
+      <p class="page-subtitle">All cases below are reviewed and verified by our admin team.</p>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <input class="form-control" type="text" id="searchInput" placeholder="🔍 Search cases..." />
+      <select class="form-control" id="categoryFilter" style="max-width:200px;">
+        <option value="all">All Categories</option>
+        <option value="Zakat">Zakat</option>
+        <option value="Sadqa">Sadqa</option>
+        <option value="Ushr">Ushr</option>
+        <option value="Fitrana">Fitrana</option>
+        <option value="General Charity">General Charity</option>
+      </select>
+      <button class="btn btn-primary" id="filterBtn">Filter</button>
+      <button class="btn btn-outline" id="resetBtn">Reset</button>
+    </div>
+
+    <div id="resultsCount" style="margin-bottom:1rem;color:var(--gray);font-size:0.9rem;"></div>
+
+    <!-- Cases Grid -->
+    <div class="cases-grid" id="casesGrid">
+      <div class="empty-state">
+        <div class="spinner spinner-dark"></div>
+        <p style="margin-top:1rem">Loading cases...</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 <span>Wasila</span></p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    let allCases = [];
+
+    async function loadCases(params = {}) {
+      const grid = document.getElementById("casesGrid");
+      const count = document.getElementById("resultsCount");
+      grid.innerHTML = `<div class="empty-state"><div class="spinner spinner-dark"></div><p style="margin-top:1rem">Loading...</p></div>`;
+      try {
+        const data = await casesAPI.getAll(params);
+        allCases = data.cases;
+        count.textContent = `${data.count} case${data.count !== 1 ? "s" : ""} found`;
+        if (!allCases.length) {
+          grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>No cases found</h3><p>Try different search terms or category.</p></div>`;
+          return;
+        }
+        grid.innerHTML = allCases.map(renderCaseCard).join("");
+      } catch (err) {
+        grid.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    }
+
+    function renderCaseCard(c) {
+      const pct = Utils.progressPercent(c.amountRaised, c.amountNeeded);
+      return `
+        <div class="case-card">
+          <div class="case-card-header">
+            <div class="case-card-category">${c.category}</div>
+            <div class="case-card-title">${c.title}</div>
+          </div>
+          <div class="case-card-body">
+            <p class="case-card-desc">${c.description}</p>
+            <div class="case-meta">
+              <span>📍 ${c.beneficiary?.city || "Pakistan"}</span>
+              <span>${Utils.timeAgo(c.createdAt)}</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-label">
+                <span class="progress-raised">${Utils.formatPKR(c.amountRaised)}</span>
+                <span class="progress-goal">of ${Utils.formatPKR(c.amountNeeded)}</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width:${pct}%"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
+              <span class="verified-badge">✅ Verified</span>
+              <span style="font-size:0.8rem;color:var(--gray)">${pct}% funded</span>
+            </div>
+            <a href="/pages/case-detail.html?id=${c._id}" class="btn btn-primary btn-block">View Details & Donate →</a>
+          </div>
+        </div>`;
+    }
+
+    // Filter handler
+    document.getElementById("filterBtn").addEventListener("click", () => {
+      const search = document.getElementById("searchInput").value.trim();
+      const category = document.getElementById("categoryFilter").value;
+      const params = {};
+      if (search) params.search = search;
+      if (category !== "all") params.category = category;
+      loadCases(params);
+    });
+
+    // Reset
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("searchInput").value = "";
+      document.getElementById("categoryFilter").value = "all";
+      loadCases();
+    });
+
+    // Search on Enter
+    document.getElementById("searchInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("filterBtn").click();
+    });
+
+    document.addEventListener("DOMContentLoaded", loadCases);
+  </script>
+</body>
+</html>

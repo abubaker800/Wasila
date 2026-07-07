@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wasila — A Digital Bridge for Zakat & Sadqa</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" type="image/svg+xml" href="/wasila-favicon.svg">
+</head>
+<body>
+
+  <!-- Navbar injected by navbar.js -->
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>وسیلہ <span>Wasila</span></h1>
+      <p>A transparent digital bridge connecting compassionate donors with deserving individuals for Zakat, Sadqa, and social support — 100% of every donation reaches the recipient.</p>
+      <div class="hero-btns">
+        <a href="/pages/cases.html" class="btn btn-gold btn-lg">Browse Verified Cases</a>
+        <a href="/pages/register.html" class="btn btn-outline btn-lg" style="color:white;border-color:white">Post a Case</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section style="padding: 4rem 1.5rem; background: white;">
+    <div class="page-container" style="padding: 0;">
+      <h2 style="text-align:center;font-size:1.8rem;color:var(--primary-dark);margin-bottom:0.5rem;">How Wasila Works</h2>
+      <p style="text-align:center;color:var(--gray);margin-bottom:3rem;">Simple, transparent, dignified.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2rem;">
+        <div style="text-align:center;padding:1.5rem;">
+          <div style="font-size:3rem;margin-bottom:1rem;">📝</div>
+          <h3 style="color:var(--primary);margin-bottom:0.5rem;">1. Post a Case</h3>
+          <p style="color:var(--gray);font-size:0.9rem;">Beneficiaries submit their situation with supporting documents like utility bills or fee challans.</p>
+        </div>
+        <div style="text-align:center;padding:1.5rem;">
+          <div style="font-size:3rem;margin-bottom:1rem;">🔍</div>
+          <h3 style="color:var(--primary);margin-bottom:0.5rem;">2. Admin Verifies</h3>
+          <p style="color:var(--gray);font-size:0.9rem;">Our team reviews every document for authenticity before the case goes public.</p>
+        </div>
+        <div style="text-align:center;padding:1.5rem;">
+          <div style="font-size:3rem;margin-bottom:1rem;">💚</div>
+          <h3 style="color:var(--primary);margin-bottom:0.5rem;">3. Donors Give</h3>
+          <p style="color:var(--gray);font-size:0.9rem;">Donors browse verified cases and transfer directly to the beneficiary's bank account.</p>
+        </div>
+        <div style="text-align:center;padding:1.5rem;">
+          <div style="font-size:3rem;margin-bottom:1rem;">✅</div>
+          <h3 style="color:var(--primary);margin-bottom:0.5rem;">4. 100% Reaches Them</h3>
+          <p style="color:var(--gray);font-size:0.9rem;">No middlemen. No cuts. Every rupee you give goes directly to the person in need.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Verified Cases -->
+  <section class="page-container">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 class="page-title">Verified Cases</h2>
+        <p class="page-subtitle">Reviewed and approved by our team</p>
+      </div>
+      <a href="/pages/cases.html" class="btn btn-primary">View All Cases</a>
+    </div>
+    <div class="cases-grid" id="homeCasesGrid">
+      <div class="empty-state"><div class="spinner spinner-dark"></div><p style="margin-top:1rem">Loading cases...</p></div>
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <section style="background:var(--primary);padding:3rem 1.5rem;margin-top:2rem;">
+    <div class="page-container" style="padding:0;text-align:center;">
+      <h2 style="color:white;margin-bottom:0.5rem;font-size:1.6rem;">Categories of Support</h2>
+      <p style="color:rgba(255,255,255,0.8);margin-bottom:2rem;">All major Islamic charity types are supported.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;">
+        <span style="background:rgba(255,255,255,0.15);color:white;padding:0.6rem 1.4rem;border-radius:30px;font-weight:600;">🌙 Zakat</span>
+        <span style="background:rgba(255,255,255,0.15);color:white;padding:0.6rem 1.4rem;border-radius:30px;font-weight:600;">🤲 Sadqa</span>
+        <span style="background:rgba(255,255,255,0.15);color:white;padding:0.6rem 1.4rem;border-radius:30px;font-weight:600;">🌾 Ushr</span>
+        <span style="background:rgba(255,255,255,0.15);color:white;padding:0.6rem 1.4rem;border-radius:30px;font-weight:600;">⭐ Fitrana</span>
+        <span style="background:rgba(255,255,255,0.15);color:white;padding:0.6rem 1.4rem;border-radius:30px;font-weight:600;">❤️ General Charity</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2026 <span>Wasila</span> — Built with ❤️ for community welfare</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    // Load 3 recent verified cases on home page
+    async function loadHomeCases() {
+      const grid = document.getElementById("homeCasesGrid");
+      try {
+        const data = await casesAPI.getAll();
+        const cases = data.cases.slice(0, 3);
+        if (!cases.length) {
+          grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🤲</div><h3>No cases yet</h3><p>Be the first to post a verified case.</p></div>`;
+          return;
+        }
+        grid.innerHTML = cases.map(renderCaseCard).join("");
+      } catch (err) {
+        grid.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    }
+
+    function renderCaseCard(c) {
+      const pct = Utils.progressPercent(c.amountRaised, c.amountNeeded);
+      return `
+        <div class="case-card">
+          <div class="case-card-header">
+            <div class="case-card-category">${c.category}</div>
+            <div class="case-card-title">${c.title}</div>
+          </div>
+          <div class="case-card-body">
+            <p class="case-card-desc">${c.description}</p>
+            <div class="case-meta">
+              <span>📍 ${c.beneficiary?.city || "Pakistan"}</span>
+              <span>${Utils.timeAgo(c.createdAt)}</span>
+            </div>
+            <div class="progress-container">
+              <div class="progress-label">
+                <span class="progress-raised">${Utils.formatPKR(c.amountRaised)}</span>
+                <span class="progress-goal">of ${Utils.formatPKR(c.amountNeeded)}</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+            </div>
+            <a href="/pages/case-detail.html?id=${c._id}" class="btn btn-primary btn-block">View & Donate →</a>
+          </div>
+        </div>`;
+    }
+
+    document.addEventListener("DOMContentLoaded", loadHomeCases);
+  </script>
+</body>
+</html>

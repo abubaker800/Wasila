@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .otp-inputs { display:flex; gap:10px; justify-content:center; margin:1.2rem 0; }
+    .otp-box {
+      width:52px; height:58px; text-align:center; font-size:1.5rem; font-weight:800;
+      border:2px solid var(--gray-light); border-radius:10px; background:#fafafa;
+      transition:all 0.2s; color:var(--primary-dark);
+    }
+    .otp-box:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(26,107,60,0.15); outline:none; background:white; }
+    .otp-box.filled { border-color:var(--primary); background:#f0fdf6; }
+    .otp-box.error { border-color:var(--danger) !important; background:#fff0f0; }
+
+    .step-indicator { display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:1.5rem; }
+    .step { display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .step-circle { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; background:var(--gray-light); color:var(--gray); }
+    .step-circle.active { background:var(--primary); color:white; }
+    .step-circle.done { background:var(--success); color:white; }
+    .step-label { font-size:0.7rem; color:var(--gray); font-weight:600; }
+    .step-line { width:60px; height:2px; background:var(--gray-light); margin-bottom:20px; }
+    .step-line.done { background:var(--success); }
+
+    .field-error { font-size:0.8rem; color:var(--danger); margin-top:0.25rem; display:none; }
+    .form-control.invalid { border-color:var(--danger); background:#fff8f8; }
+    .form-control.valid { border-color:var(--success); }
+    .timer { text-align:center; font-size:0.85rem; color:var(--gray); margin-top:0.5rem; }
+    .timer span { color:var(--danger); font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card" style="max-width:520px;">
+      <div class="auth-logo">
+        <h1><span>وسیلہ</span> Wasila</h1>
+        <p>Join our community of giving</p>
+      </div>
+
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step">
+          <div class="step-circle active" id="step1Circle">1</div>
+          <div class="step-label">Your Details</div>
+        </div>
+        <div class="step-line" id="stepLine"></div>
+        <div class="step">
+          <div class="step-circle" id="step2Circle">2</div>
+          <div class="step-label">Verify Email</div>
+        </div>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <!-- ===== STEP 1: Registration Form ===== -->
+      <div id="step1">
+        <h2 class="auth-title">Create Account</h2>
+        <form id="registerForm" novalidate>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <!-- Full Name -->
+            <div class="form-group">
+              <label class="form-label">Full Name <span style="color:var(--danger)">*</span></label>
+              <input class="form-control" type="text" id="name" placeholder="e.g. Ahmed Khan" autocomplete="name" />
+              <div class="field-error" id="nameErr">Name must be 2–50 characters.</div>
+            </div>
+            <!-- Phone -->
+            <div class="form-group">
+              <label class="form-label">Phone Number <span style="color:var(--danger)">*</span></label>
+              <input class="form-control" type="tel" id="phone" placeholder="03001234567" autocomplete="tel" />
+              <div class="field-error" id="phoneErr">Enter valid Pakistani number (e.g. 03001234567).</div>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label class="form-label">Email Address <span style="color:var(--danger)">*</span></label>
+            <input class="form-control" type="email" id="email" placeholder="you@gmail.com" autocomplete="email" />
+            <div class="field-error" id="emailErr">Please enter a valid email address.</div>
+            <p class="form-hint">OTP verification code will be sent here.</p>
+          </div>
+
+          <!-- City -->
+          <div class="form-group">
+            <label class="form-label">City <span style="color:var(--danger)">*</span></label>
+            <input class="form-control" type="text" id="city" placeholder="e.g. Multan, Lahore, Karachi" />
+            <div class="field-error" id="cityErr">Please enter your city.</div>
+          </div>
+
+          <!-- Role -->
+          <div class="form-group">
+            <label class="form-label">I want to join as <span style="color:var(--danger)">*</span></label>
+            <select class="form-control" id="role">
+              <option value="">-- Select Role --</option>
+              <option value="donor">💚 Donor — I want to help others</option>
+              <option value="beneficiary">🤲 Beneficiary — I need financial support</option>
+            </select>
+            <div class="field-error" id="roleErr">Please select your role.</div>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label class="form-label">Password <span style="color:var(--danger)">*</span></label>
+            <input class="form-control" type="password" id="password" placeholder="Minimum 6 characters" autocomplete="new-password" />
+            <div class="field-error" id="passErr">Password must be at least 6 characters.</div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label class="form-label">Confirm Password <span style="color:var(--danger)">*</span></label>
+            <input class="form-control" type="password" id="confirmPassword" placeholder="Repeat your password" autocomplete="new-password" />
+            <div class="field-error" id="confirmPassErr">Passwords do not match.</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="sendOtpBtn">
+            Send Verification Code →
+          </button>
+        </form>
+      </div>
+
+      <!-- ===== STEP 2: OTP Verification ===== -->
+      <div id="step2" style="display:none;">
+        <h2 class="auth-title">Verify Your Email</h2>
+        <p style="color:var(--gray);font-size:0.9rem;margin-bottom:1.2rem;">
+          We sent a 6-digit code to <strong id="displayEmail" style="color:var(--primary)"></strong>
+        </p>
+        <div class="otp-inputs">
+          <input class="otp-box" type="text" maxlength="1" id="otp1" inputmode="numeric" pattern="[0-9]" />
+          <input class="otp-box" type="text" maxlength="1" id="otp2" inputmode="numeric" pattern="[0-9]" />
+          <input class="otp-box" type="text" maxlength="1" id="otp3" inputmode="numeric" pattern="[0-9]" />
+          <input class="otp-box" type="text" maxlength="1" id="otp4" inputmode="numeric" pattern="[0-9]" />
+          <input class="otp-box" type="text" maxlength="1" id="otp5" inputmode="numeric" pattern="[0-9]" />
+          <input class="otp-box" type="text" maxlength="1" id="otp6" inputmode="numeric" pattern="[0-9]" />
+        </div>
+        <div class="timer">Code expires in <span id="countdown">10:00</span></div>
+        <button class="btn btn-primary btn-block btn-lg" id="verifyOtpBtn" style="margin-top:1.2rem;" onclick="submitOTP()">
+          ✓ Verify & Create Account
+        </button>
+        <div style="text-align:center;margin-top:1rem;display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
+          <button id="resendBtn" class="btn btn-outline btn-sm" onclick="resendOTP()" disabled>Resend Code</button>
+          <button class="btn btn-sm" style="color:var(--gray);background:none;border:none;cursor:pointer;" onclick="goBackToStep1()">← Change Info</button>
+        </div>
+      </div>
+
+      <div class="auth-switch" style="margin-top:1.2rem;">
+        Already have an account? <a href="/pages/login.html">Login here</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) window.location.href = "/";
+
+    let currentEmail = "";
+    let countdownInterval = null;
+
+    // ===== Live field validation =====
+    const validators = {
+      name: (v) => v.trim().length >= 2 && v.trim().length <= 50,
+      email: (v) => /^\S+@\S+\.\S+$/.test(v.trim()),
+      phone: (v) => /^((\+92|0)[0-9]{10})$/.test(v.trim()),
+      city: (v) => v.trim().length >= 2,
+      role: (v) => ["donor", "beneficiary"].includes(v),
+      password: (v) => v.length >= 6,
+    };
+
+    function validateField(id, validatorKey) {
+      const el = document.getElementById(id);
+      const errEl = document.getElementById(id + "Err");
+      const valid = validators[validatorKey](el.value);
+      el.classList.toggle("valid", valid);
+      el.classList.toggle("invalid", !valid);
+      if (errEl) errEl.style.display = valid ? "none" : "block";
+      return valid;
+    }
+
+    // Attach live validation
+    ["name", "email", "phone", "city", "password"].forEach(id => {
+      document.getElementById(id).addEventListener("blur", () => validateField(id, id));
+      document.getElementById(id).addEventListener("input", () => {
+        if (document.getElementById(id).classList.contains("invalid")) validateField(id, id);
+      });
+    });
+
+    document.getElementById("role").addEventListener("change", () => validateField("role", "role"));
+
+    document.getElementById("confirmPassword").addEventListener("input", () => {
+      const pass = document.getElementById("password").value;
+      const conf = document.getElementById("confirmPassword").value;
+      const match = conf === pass && conf.length > 0;
+      document.getElementById("confirmPassword").classList.toggle("valid", match);
+      document.getElementById("confirmPassword").classList.toggle("invalid", !match);
+      document.getElementById("confirmPassErr").style.display = match ? "none" : "block";
+    });
+
+    // ===== STEP 1: Submit =====
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      Utils.clearAlert("alertBox");
+
+      // Validate all fields
+      const v1 = validateField("name", "name");
+      const v2 = validateField("email", "email");
+      const v3 = validateField("phone", "phone");
+      const v4 = validateField("city", "city");
+      const v5 = validateField("role", "role");
+      const v6 = validateField("password", "password");
+      const pass = document.getElementById("password").value;
+      const conf = document.getElementById("confirmPassword").value;
+      const v7 = pass === conf && conf.length > 0;
+      if (!v7) {
+        document.getElementById("confirmPassword").classList.add("invalid");
+        document.getElementById("confirmPassErr").style.display = "block";
+      }
+
+      if (!v1 || !v2 || !v3 || !v4 || !v5 || !v6 || !v7) {
+        return Utils.showAlert("alertBox", "Please fix the errors above before continuing.", "danger");
+      }
+
+      const btn = document.getElementById("sendOtpBtn");
+      Utils.setLoading(btn, true);
+
+      const body = {
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        city: document.getElementById("city").value.trim(),
+        role: document.getElementById("role").value,
+        password: pass,
+      };
+
+      try {
+        await authAPI.sendOTP(body);
+        currentEmail = body.email;
+
+        // Go to step 2
+        document.getElementById("step1").style.display = "none";
+        document.getElementById("step2").style.display = "block";
+        document.getElementById("displayEmail").textContent = body.email;
+        document.getElementById("step1Circle").className = "step-circle done";
+        document.getElementById("step1Circle").textContent = "✓";
+        document.getElementById("step2Circle").className = "step-circle active";
+        document.getElementById("stepLine").className = "step-line done";
+        startCountdown(600);
+        document.getElementById("otp1").focus();
+      } catch (err) {
+        Utils.showAlert("alertBox", err.message, "danger");
+        Utils.setLoading(btn, false);
+      }
+    });
+
+    // ===== OTP Box Logic =====
+    const otpBoxes = [1,2,3,4,5,6].map(i => document.getElementById(`otp${i}`));
+    otpBoxes.forEach((box, idx) => {
+      box.addEventListener("input", () => {
+        box.value = box.value.replace(/[^0-9]/g, "");
+        if (box.value) {
+          box.classList.add("filled");
+          if (idx < 5) otpBoxes[idx + 1].focus();
+          if (otpBoxes.every(b => b.value)) submitOTP();
+        } else {
+          box.classList.remove("filled");
+        }
+      });
+      box.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !box.value && idx > 0) {
+          otpBoxes[idx - 1].focus();
+          otpBoxes[idx - 1].value = "";
+          otpBoxes[idx - 1].classList.remove("filled");
+        }
+      });
+      box.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const pasted = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, 6);
+        pasted.split("").forEach((char, i) => {
+          if (otpBoxes[i]) { otpBoxes[i].value = char; otpBoxes[i].classList.add("filled"); }
+        });
+        if (pasted.length === 6) submitOTP();
+      });
+    });
+
+    // ===== STEP 2: Verify OTP =====
+    async function submitOTP() {
+      Utils.clearAlert("alertBox");
+      const otp = otpBoxes.map(b => b.value).join("");
+      if (otp.length !== 6) return Utils.showAlert("alertBox", "Please enter the complete 6-digit code.", "danger");
+
+      const btn = document.getElementById("verifyOtpBtn");
+      Utils.setLoading(btn, true);
+      try {
+        const data = await authAPI.verifyOTP({ email: currentEmail, otp });
+        Auth.save(data.token, data.user);
+        clearInterval(countdownInterval);
+        Utils.showAlert("alertBox", "✅ Account created! Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = data.user.role === "beneficiary"
+            ? "/pages/beneficiary-dashboard.html"
+            : "/pages/donor-dashboard.html";
+        }, 1500);
+      } catch (err) {
+        Utils.showAlert("alertBox", err.message, "danger");
+        otpBoxes.forEach(b => { b.classList.add("error"); setTimeout(() => b.classList.remove("error"), 1000); });
+        Utils.setLoading(btn, false);
+      }
+    }
+
+    // ===== Resend OTP =====
+    async function resendOTP() {
+      Utils.clearAlert("alertBox");
+      const btn = document.getElementById("resendBtn");
+      Utils.setLoading(btn, true);
+      try {
+        await authAPI.resendOTP({ email: currentEmail });
+        Utils.showAlert("alertBox", "New OTP sent to your email.", "success");
+        otpBoxes.forEach(b => { b.value = ""; b.classList.remove("filled"); });
+        otpBoxes[0].focus();
+        startCountdown(600);
+      } catch (err) {
+        Utils.showAlert("alertBox", err.message, "danger");
+      }
+      Utils.setLoading(btn, false);
+    }
+
+    // ===== Countdown =====
+    function startCountdown(seconds) {
+      clearInterval(countdownInterval);
+      document.getElementById("resendBtn").disabled = true;
+      let remaining = seconds;
+      countdownInterval = setInterval(() => {
+        remaining--;
+        const m = Math.floor(remaining / 60).toString().padStart(2, "0");
+        const s = (remaining % 60).toString().padStart(2, "0");
+        document.getElementById("countdown").textContent = `${m}:${s}`;
+        if (remaining <= 570) document.getElementById("resendBtn").disabled = false;
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          document.getElementById("countdown").textContent = "Expired";
+          document.getElementById("resendBtn").disabled = false;
+        }
+      }, 1000);
+    }
+
+    function goBackToStep1() {
+      clearInterval(countdownInterval);
+      document.getElementById("step1").style.display = "block";
+      document.getElementById("step2").style.display = "none";
+      document.getElementById("step1Circle").className = "step-circle active";
+      document.getElementById("step1Circle").textContent = "1";
+      document.getElementById("step2Circle").className = "step-circle";
+      document.getElementById("stepLine").className = "step-line";
+      document.getElementById("sendOtpBtn").innerHTML = "Send Verification Code →";
+      document.getElementById("sendOtpBtn").disabled = false;
+      Utils.clearAlert("alertBox");
+    }
+  </script>
+</body>
+</html>

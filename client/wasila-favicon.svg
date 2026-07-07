@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="28" fill="#1B5E35"/>
+
+  <!-- Outer hexagon -->
+  <polygon points="64,10 112,37 112,91 64,118 16,91 16,37" fill="none" stroke="#D4AF37" stroke-width="2.5"/>
+
+  <!-- Inner hexagon -->
+  <polygon points="64,20 104,43 104,85 64,108 24,85 24,43" fill="none" stroke="#D4AF37" stroke-width="0.8" opacity="0.4"/>
+
+  <!-- Corner diamonds -->
+  <polygon points="64,10 67,16 64,22 61,16" fill="#D4AF37"/>
+  <polygon points="112,37 106,40 100,37 106,34" fill="#D4AF37"/>
+  <polygon points="112,91 106,88 100,91 106,94" fill="#D4AF37"/>
+  <polygon points="64,118 67,112 64,106 61,112" fill="#D4AF37"/>
+  <polygon points="16,91 22,88 28,91 22,94" fill="#D4AF37"/>
+  <polygon points="16,37 22,40 28,37 22,34" fill="#D4AF37"/>
+
+  <!-- WASILA top label -->
+  <text x="64" y="50" text-anchor="middle" fill="#D4AF37" font-size="13" font-weight="700" font-family="Georgia, 'Times New Roman', serif" letter-spacing="3">WASILA</text>
+
+  <!-- Divider line -->
+  <line x1="30" y1="57" x2="98" y2="57" stroke="#D4AF37" stroke-width="0.8" opacity="0.6"/>
+
+  <!-- Arabic: وسيلة -->
+  <text x="64" y="88" text-anchor="middle" fill="#D4AF37" font-size="28" font-weight="700" font-family="'Noto Naskh Arabic', 'Arabic Typesetting', 'Traditional Arabic', Georgia, serif">وسيلة</text>
+
+  <!-- Bottom decorative dots -->
+  <circle cx="52" cy="98" r="2" fill="#D4AF37" opacity="0.5"/>
+  <circle cx="64" cy="100" r="2" fill="#D4AF37" opacity="0.7"/>
+  <circle cx="76" cy="98" r="2" fill="#D4AF37" opacity="0.5"/>
+</svg>

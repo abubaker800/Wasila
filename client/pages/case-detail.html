@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case Detail — Wasila</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- Navbar injected by navbar.js -->
+
+  <div class="page-container" id="pageContainer">
+    <div class="empty-state"><div class="spinner spinner-dark"></div><p style="margin-top:1rem">Loading case...</p></div>
+  </div>
+
+  <!-- Donate Modal -->
+  <div class="modal-overlay" id="donateModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>💚 Record Your Donation</h3>
+        <button class="modal-close" onclick="closeDonateModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="donateAlertBox"></div>
+        <div id="paymentInfo" style="background:var(--success-light);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;font-size:0.9rem;"></div>
+        <div class="form-group">
+          <label class="form-label">Amount (PKR) *</label>
+          <input class="form-control" type="number" id="donateAmount" placeholder="e.g. 5000" min="50" />
+          <p class="form-hint">Minimum: Rs. 50</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message to Beneficiary (optional)</label>
+          <textarea class="form-control" id="donateMessage" placeholder="Your kind words..." rows="3"></textarea>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+          <input type="checkbox" id="isAnonymous" style="width:18px;height:18px;" />
+          <label for="isAnonymous" style="font-size:0.9rem;cursor:pointer">Donate anonymously</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeDonateModal()">Cancel</button>
+        <button class="btn btn-gold" id="confirmDonateBtn" onclick="submitDonation()">Confirm Pledge</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 <span>Wasila</span></p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script>
+    // Get case ID from URL query string
+    const caseId = new URLSearchParams(window.location.search).get("id");
+    let currentCase = null;
+
+    async function loadCase() {
+      const container = document.getElementById("pageContainer");
+      if (!caseId) {
+        container.innerHTML = `<div class="alert alert-danger">No case ID provided.</div>`;
+        return;
+      }
+      try {
+        const data = await casesAPI.getById(caseId);
+        currentCase = data.case;
+        renderCaseDetail(data.case, data.donations);
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      }
+    }
+
+    function renderCaseDetail(c, donations) {
+      const pct = Utils.progressPercent(c.amountRaised, c.amountNeeded);
+      const user = Auth.user();
+      const isDonor = user?.role === "donor";
+
+      const donationsHTML = donations.length
+        ? donations.map(d => `
+            <div style="padding:0.75rem 0;border-bottom:1px solid var(--gray-light);display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <span style="font-weight:600">${d.isAnonymous ? "Anonymous" : d.donor?.name || "Donor"}</span>
+                ${d.message ? `<p style="font-size:0.85rem;color:var(--gray);margin-top:0.2rem">"${d.message}"</p>` : ""}
+              </div>
+              <div style="font-weight:700;color:var(--primary)">${Utils.formatPKR(d.amount)}</div>
+            </div>`).join("")
+        : `<p style="color:var(--gray);font-size:0.9rem;">No donations yet. Be the first!</p>`;
+
+      const proofsHTML = c.proofDocuments?.length
+        ? `<div class="proof-list">${c.proofDocuments.map(p => `
+            <div class="proof-item">📄 <a href="${p.path}" target="_blank">${p.filename}</a></div>`).join("")}</div>`
+        : `<p style="color:var(--gray);font-size:0.88rem;">No documents uploaded.</p>`;
+
+      document.getElementById("pageContainer").innerHTML = `
+        <a href="/pages/cases.html" style="display:inline-flex;align-items:center;gap:0.5rem;color:var(--primary);font-weight:600;margin-bottom:1.5rem;">← Back to Cases</a>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:2rem;align-items:start;" class="case-detail-grid">
+          <!-- Left: Case Info -->
+          <div>
+            <div class="card" style="margin-bottom:1.5rem;">
+              <div style="background:linear-gradient(135deg,var(--primary),var(--primary-light));padding:1.5rem;border-radius:var(--radius) var(--radius) 0 0;">
+                <span class="case-card-category">${c.category}</span>
+                <h1 style="color:white;font-size:1.5rem;margin-top:0.5rem;">${c.title}</h1>
+                <div style="display:flex;gap:1rem;margin-top:0.75rem;flex-wrap:wrap;">
+                  <span style="color:rgba(255,255,255,0.85);font-size:0.85rem;">📍 ${c.beneficiary?.city || "Pakistan"}</span>
+                  <span style="color:rgba(255,255,255,0.85);font-size:0.85rem;">🕐 ${Utils.timeAgo(c.createdAt)}</span>
+                  <span class="verified-badge">✅ Verified</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <h3 style="margin-bottom:0.75rem;color:var(--primary-dark);">About This Case</h3>
+                <p style="color:#374151;line-height:1.7;">${c.description}</p>
+              </div>
+            </div>
+
+            <!-- Proof Documents -->
+            <div class="card" style="margin-bottom:1.5rem;">
+              <div class="card-header">📂 Supporting Documents</div>
+              <div class="card-body">${proofsHTML}</div>
+            </div>
+
+            <!-- Donors List -->
+            <div class="card">
+              <div class="card-header">💚 Donors (${donations.length})</div>
+              <div class="card-body">${donationsHTML}</div>
+            </div>
+          </div>
+
+          <!-- Right: Donation Box -->
+          <div style="position:sticky;top:80px;">
+            <div class="card">
+              <div class="card-body">
+                <div class="progress-container">
+                  <div class="progress-label">
+                    <span class="progress-raised">${Utils.formatPKR(c.amountRaised)}</span>
+                    <span class="progress-goal">of ${Utils.formatPKR(c.amountNeeded)}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width:${pct}%"></div>
+                  </div>
+                  <p style="font-size:0.82rem;color:var(--gray);margin-top:0.3rem;">${pct}% funded</p>
+                </div>
+
+                <hr style="margin:1rem 0;border-color:var(--gray-light);">
+
+                <h4 style="margin-bottom:0.5rem;color:var(--primary-dark);">💳 Payment Details</h4>
+                <div style="background:var(--light);border-radius:var(--radius-sm);padding:0.75rem;font-size:0.88rem;margin-bottom:1rem;">
+                  <p><strong>Method:</strong> ${c.paymentDetails?.method}</p>
+                  <p><strong>Account:</strong> ${c.paymentDetails?.accountNumber}</p>
+                  <p><strong>Name:</strong> ${c.paymentDetails?.accountName}</p>
+                </div>
+
+                ${isDonor
+                  ? `<button class="btn btn-gold btn-block btn-lg" onclick="openDonateModal()">💚 Record Donation</button>
+                     <p style="font-size:0.78rem;color:var(--gray);text-align:center;margin-top:0.5rem;">Transfer directly, then record here.</p>`
+                  : !Auth.isLoggedIn()
+                  ? `<a href="/pages/login.html" class="btn btn-primary btn-block btn-lg">Login to Donate</a>`
+                  : `<p style="text-align:center;color:var(--gray);font-size:0.9rem;">Only donors can pledge.</p>`
+                }
+
+                <hr style="margin:1rem 0;border-color:var(--gray-light);">
+                <p style="font-size:0.82rem;color:var(--gray);"><strong>Beneficiary:</strong> ${c.beneficiary?.name || "Unknown"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <style>
+          @media(max-width:768px){.case-detail-grid{grid-template-columns:1fr!important}}
+        </style>`;
+    }
+
+    function openDonateModal() {
+      if (!Auth.isLoggedIn()) return window.location.href = "/pages/login.html";
+      // Show payment info in modal
+      if (currentCase) {
+        document.getElementById("paymentInfo").innerHTML =
+          `<strong>⚠️ Important:</strong> Please transfer the money directly to:<br>
+           <strong>${currentCase.paymentDetails.method}</strong>: ${currentCase.paymentDetails.accountNumber} (${currentCase.paymentDetails.accountName})<br>
+           Then record your pledge below.`;
+      }
+      document.getElementById("donateModal").classList.add("active");
+    }
+
+    function closeDonateModal() {
+      document.getElementById("donateModal").classList.remove("active");
+      Utils.clearAlert("donateAlertBox");
+    }
+
+    async function submitDonation() {
+      Utils.clearAlert("donateAlertBox");
+      const amount = document.getElementById("donateAmount").value;
+      const message = document.getElementById("donateMessage").value;
+      const isAnonymous = document.getElementById("isAnonymous").checked;
+      const btn = document.getElementById("confirmDonateBtn");
+
+      if (!amount || Number(amount) < 50) {
+        return Utils.showAlert("donateAlertBox", "Minimum donation is Rs. 50.", "danger");
+      }
+
+      Utils.setLoading(btn, true);
+      try {
+        await donationsAPI.create({ caseId, amount: Number(amount), message, isAnonymous });
+        closeDonateModal();
+        alert("✅ Your donation pledge has been recorded! JazakAllah Khair.");
+        loadCase(); // Refresh case data
+      } catch (err) {
+        Utils.showAlert("donateAlertBox", err.message, "danger");
+        Utils.setLoading(btn, false);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadCase);
+  </script>
+</body>
+</html>
